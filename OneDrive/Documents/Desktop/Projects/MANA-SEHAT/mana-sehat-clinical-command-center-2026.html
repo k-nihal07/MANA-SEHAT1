@@ -23,6 +23,7 @@
           <button data-section="patients"><i>♙</i>Patients <em>24</em></button>
           <button data-section="appointments"><i>◷</i>Appointments</button>
           <button data-section="records"><i>▣</i>Case summaries</button>
+          <button data-section="referrals"><i>↗</i>Refer patient</button>
           <button data-section="analytics"><i>◒</i>Analytics</button>
         </nav>
         <div class="ms26-sidebar-bottom">
@@ -30,6 +31,7 @@
           <button class="ms26-sidebar-link"><i>⚙</i> Workspace settings</button>
           <button class="ms26-sidebar-link"><i>?</i> Help center</button>
           <div class="ms26-user"><div class="ms26-avatar">AM</div><span><b>Dr. Ananya Mehta</b><small>Clinical lead</small></span><button aria-label="Profile menu">⌄</button></div>
+          <a class="ms26-sidebar-link" href="index.html">↪ Log out securely</a>
         </div>
       </aside>
 
@@ -47,7 +49,7 @@
         <div class="ms26-content">
           <section class="ms26-section is-visible" data-panel="overview">
             <div class="ms26-hero">
-              <div><p class="ms26-eyebrow">WEDNESDAY, 16 SEPTEMBER 2026 · 09:42 AM</p><h1>Good morning, Dr. Mehta <span>✦</span></h1><p>Here is the care picture for your team today.</p></div>
+              <div><p class="ms26-eyebrow">WEDNESDAY, 16 SEPTEMBER 2026 · 09:42 AM</p><h1>Good morning, Dr. Mehta <span>✦</span></h1><p>Here is the care picture for your team today.</p><button class="ms26-primary ms26-hero-action" data-section-target="referrals">↗ Refer a patient to another hospital</button></div>
               <div class="ms26-view-switch" role="tablist" aria-label="Choose dashboard view">
                 <button class="is-selected" data-mode="doctor" role="tab">Doctor view</button>
                 <button data-mode="hospital" role="tab">Hospital view</button>
@@ -111,6 +113,20 @@
           <section class="ms26-section" data-panel="records">
             <div class="ms26-page-title"><div><p class="ms26-eyebrow">CLINICAL REVIEW QUEUE</p><h1>Case summaries</h1><p>AI-organised patient stories, ready for your clinical judgement.</p></div><span class="ms26-secure-pill">🔒 Consent-aware</span></div>
             <div class="ms26-review-grid"><article class="ms26-review-card ms26-review-urgent"><div class="ms26-review-top"><span class="ms26-status ms26-status-coral">Urgent review</span><time>8 min ago</time></div><h2>Riya Sharma</h2><p>Recurring headaches · 12 days</p><div class="ms26-review-summary"><b>AI summary</b><span>4 symptoms · 2 possible triggers · no red flags detected</span></div><button class="ms26-primary ms26-full" data-action="Review Riya Sharma's summary">Review summary →</button></article><article class="ms26-review-card"><div class="ms26-review-top"><span class="ms26-status ms26-status-teal">Ready</span><time>24 min ago</time></div><h2>Vikram Kumar</h2><p>Chest discomfort · New patient</p><div class="ms26-review-summary"><b>AI summary</b><span>6 symptoms · medication history attached · vitals pending</span></div><button class="ms26-outline ms26-full" data-action="Review Vikram Kumar's summary">Review summary →</button></article><article class="ms26-review-card"><div class="ms26-review-top"><span class="ms26-status ms26-status-teal">Ready</span><time>1 hr ago</time></div><h2>Priya Menon</h2><p>Type 2 diabetes · Care review</p><div class="ms26-review-summary"><b>AI summary</b><span>3 observations · glucose log attached · care plan updated</span></div><button class="ms26-outline ms26-full" data-action="Review Priya Menon's summary">Review summary →</button></article></div>
+          </section>
+
+          <section class="ms26-section" data-panel="referrals">
+            <div class="ms26-page-title"><div><p class="ms26-eyebrow">CARE COORDINATION</p><h1>Refer a patient</h1><p>Create a synthetic referral to another hospital for specialist review or investigations.</p></div><span class="ms26-secure-pill">Demo workflow</span></div>
+            <form class="ms26-panel" id="doctor-referral-form">
+              <div class="ms26-form-grid">
+                <label>Patient<select name="patientId" required><option value="PAT-1001">Lakshmi Devi · PAT-1001</option><option value="PAT-1002">Ravi Kumar · PAT-1002</option></select></label>
+                <label>Receiving hospital<select name="toFacilityId" required><option value="FAC-002">CHC Miryalaguda</option><option value="FAC-001">PHC Nalgonda Rural</option></select></label>
+                <label>Priority<select name="urgency"><option value="routine">Routine</option><option value="urgent">Urgent</option></select></label>
+                <label>Referral reason<textarea name="reason" rows="3" required placeholder="Describe the clinical reason and requested review"></textarea></label>
+              </div>
+              <button class="ms26-primary" type="submit">Create referral →</button>
+              <p id="doctor-referral-status" class="ms26-form-status" role="status"></p>
+            </form>
           </section>
 
           <section class="ms26-section" data-panel="analytics">

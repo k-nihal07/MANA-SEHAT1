@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
   </head>
   <body>
     <section class="login-screen" id="login-screen">
@@ -24,6 +25,7 @@
         <div class="login-role-switch" role="tablist" aria-label="Choose login type">
           <button class="active" data-login-role="patient" role="tab">Patient login</button>
           <button data-login-role="doctor" role="tab">Doctor login</button>
+          <button data-login-role="hospital_staff" role="tab">Hospital staff</button>
         </div>
         <p class="eyebrow" id="login-eyebrow" data-i18n="secureLogin">SECURE PATIENT LOGIN</p>
         <h1 id="login-title" data-i18n="loginTitle">Your health, your way.</h1>
@@ -56,7 +58,7 @@
         <nav>
           <button class="nav-item active" data-view="overview"><span>⌂</span> Overview</button>
           <button class="nav-item" data-view="case-taking"><span>✦</span> AI Case-taking <b class="nav-badge">2</b></button>
-          <button class="nav-item" data-view="records"><span>▣</span> Health records</button>
+          <button class="nav-item" data-view="find-care"><span>⌖</span> Find care nearby</button>
           <button class="nav-item" data-view="timeline"><span>◷</span> Patient timeline</button>
           <button class="nav-item" data-view="appointments"><span>□</span> Appointments</button>
         </nav>
@@ -97,6 +99,14 @@
             <div class="case-layout"><div class="case-main panel"><div class="progress-wrap"><div><span>Question <strong id="question-number">1</strong> of 5</span><span id="progress-label">Getting started</span></div><div class="progress"><i id="progress-bar"></i></div></div><div class="assistant-message"><div class="assistant-avatar">✦</div><div><span class="role">MANA-SEHAT AI · हिंदी / ENGLISH</span><h2 id="question-text">What brings you here today?</h2><p id="question-helper">You can type your answer or use the microphone. Take your time.</p></div></div><div id="answer-area" class="answer-area"><textarea id="answer-input" placeholder="For example: I’ve been having a headache since last week..." rows="4"></textarea><div class="input-actions"><button class="voice-button" id="voice-button"><span>♩</span> Speak your answer</button><span class="character-count">0 / 500</span></div></div><div class="case-footer"><button class="text-button" id="skip-question">Skip for now</button><button class="primary-button" id="next-question">Save & continue <span>→</span></button></div></div><aside class="case-side"><div class="side-card risk-card"><div class="side-card-title"><span>♧</span> Safety check</div><p>If you have severe chest pain, difficulty breathing, sudden weakness, or loss of consciousness, please call emergency services immediately.</p><button class="emergency-button">Emergency help</button></div><div class="side-card"><div class="side-card-title"><span>▣</span> Your case so far</div><div class="case-item completed"><span>✓</span><div><strong>Main concern</strong><small>Recurring headaches</small></div></div><div class="case-item"><span>2</span><div><strong>Symptoms & pattern</strong><small>Up next</small></div></div><div class="case-item"><span>3</span><div><strong>Medical history</strong><small>Not started</small></div></div><div class="case-item"><span>4</span><div><strong>Lifestyle & triggers</strong><small>Not started</small></div></div></div></aside></div>
           </section>
 
+          <section class="view" id="find-care">
+            <div class="page-title"><div><p class="eyebrow">NEARBY CARE</p><h1>Find a specialist or facility</h1><p class="muted">Explore synthetic demo hospitals, doctors, medical services, and labs near you.</p></div><span class="secure-pill">Demo directory</span></div>
+            <div class="filter-row"><div class="tabs"><button class="active" type="button" data-care-filter="all">All</button><button type="button" data-care-filter="hospital">Hospitals</button><button type="button" data-care-filter="doctor">Doctors</button><button type="button" data-care-filter="lab">Medical & labs</button><button type="button" data-care-filter="medicine">Medicines</button></div></div>
+            <div class="care-map panel" id="care-map" aria-label="Registered hospitals map"></div>
+            <p class="muted care-map-status" id="care-map-status">Loading registered hospital locations…</p>
+            <div class="records-list panel" id="care-directory"><div class="empty-records"><strong>Loading nearby care…</strong><span>We are checking the available demo directory.</span></div></div>
+          </section>
+
           <section class="view" id="records">
             <div class="page-title"><div><p class="eyebrow">YOUR DOCUMENTS</p><h1>Health records</h1><p class="muted">Keep your prescriptions, reports, and health documents together.</p></div><button class="primary-button" id="upload-trigger">＋ Upload document</button></div>
             <div class="upload-zone" id="upload-zone"><div class="upload-icon">↑</div><h3>Drop a report here, or browse</h3><p>PDF, JPG, or PNG · Up to 10 MB per file</p><button class="outline-button">Choose a file</button><input type="file" id="file-input" hidden accept=".pdf,.jpg,.jpeg,.png" /></div>
@@ -133,7 +143,7 @@
             <button class="logout-button" id="logout-button">↪ Log out securely</button>
           </section>
         </div>
-        <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-view="overview"><span class="nav-icon home-icon">⌂</span><b data-i18n="home">Home</b></button><button data-view="timeline"><span class="nav-icon history-icon">◷</span><b data-i18n="history">History</b></button><button class="scan-nav" data-view="scan"><span class="scan-symbol"><i></i><em></em></span><b data-i18n="scan">Scan</b></button><button data-view="records"><span class="nav-icon records-icon">▣</span><b data-i18n="records">Records</b></button><button data-view="profile"><span class="nav-icon profile-icon">●</span><b data-i18n="profile">Profile</b></button></nav>
+        <nav class="mobile-nav" aria-label="Mobile navigation"><button class="active" data-view="overview"><span class="nav-icon home-icon">⌂</span><b data-i18n="home">Home</b></button><button data-view="timeline"><span class="nav-icon history-icon">◷</span><b data-i18n="history">History</b></button><button class="scan-nav" data-view="scan"><span class="scan-symbol"><i></i><em></em></span><b data-i18n="scan">Scan</b></button><button data-view="find-care"><span class="nav-icon records-icon">⌖</span><b>Find care</b></button><button data-view="profile"><span class="nav-icon profile-icon">●</span><b data-i18n="profile">Profile</b></button></nav>
       </main>
     </div>
     <button class="chatbot-fab" id="chatbot-fab" aria-label="Open MANA-SEHAT assistant"><span class="chatbot-spark">✦</span><span class="chatbot-face">●</span><i></i></button>
@@ -145,6 +155,7 @@
     <div class="app-loading" id="app-loading" hidden aria-live="polite" aria-busy="true"><div class="loading-card"><img class="logo-image large" src="mana-sehat-logo.png" alt="MANA-SEHAT" /><strong>MANA<span>-SEHAT</span></strong><p data-i18n="loading">Please wait while we prepare your secure experience…</p><label class="loading-language" for="loading-language-select">अ <select id="loading-language-select" aria-label="Select language while loading"><option value="en">English</option><option value="te">తెలుగు</option><option value="hi">हिंदी</option><option value="ta">தமிழ்</option></select></label><span class="loading-spinner"></span></div></div>
     <div class="toast" id="toast">Saved successfully</div>
     <script src="translations.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="app.js"></script>
   </body>
 </html>

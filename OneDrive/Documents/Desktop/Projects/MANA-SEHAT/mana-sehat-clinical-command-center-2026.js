@@ -44,6 +44,32 @@ document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("click", () => ms26ShowToast(`${button.dataset.action} · connected to your care workflow`));
 });
 
+const ms26ReferralForm = document.querySelector("#doctor-referral-form");
+if (ms26ReferralForm) {
+  ms26ReferralForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const status = document.querySelector("#doctor-referral-status");
+    const data = Object.fromEntries(new FormData(ms26ReferralForm));
+    status.textContent = "Creating referral…";
+    try {
+      const apiBase = window.MANA_SEHAT_API_URL || (location.protocol === "file:" ? "http://localhost:3001" : location.origin);
+      const response = await fetch(`${apiBase}/api/demo/referrals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-demo-role": "doctor" },
+        body: JSON.stringify({ ...data, fromFacilityId: "FAC-001" }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Referral could not be created.");
+      status.textContent = `Referral ${result.referral.id} created and marked ${result.referral.urgency}.`;
+      ms26ShowToast("Referral created · hospital tracking enabled");
+      ms26ReferralForm.reset();
+    } catch (error) {
+      status.textContent = error.message;
+      ms26ShowToast("Referral could not be created");
+    }
+  });
+}
+
 const ms26PatientSearch = document.querySelector("#ms26-patient-search");
 const ms26Rows = [...document.querySelectorAll("#ms26-patient-table tr")];
 let ms26Filter = "all";

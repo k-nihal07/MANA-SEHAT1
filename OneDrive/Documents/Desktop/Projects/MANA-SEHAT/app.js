@@ -38,6 +38,7 @@ function applyLanguage(language) {
   languageSelect.value = language;
   loginLanguageSelect.value = language;
   loadingLanguageSelect.value = language;
+  setTimeout(updateChatbotContext, 0);
 }
 
 function setLoading(isLoading) {
@@ -47,14 +48,19 @@ function setLoading(isLoading) {
 
 languageSelect.addEventListener("change", () => {
   applyLanguage(languageSelect.value);
+  updateChatbotContext();
   loginLanguageSelect.value = languageSelect.value;
   showToast(`${translations[languageSelect.value].language} selected`);
 });
 loginLanguageSelect.addEventListener("change", () => {
   languageSelect.value = loginLanguageSelect.value;
   applyLanguage(loginLanguageSelect.value);
+  updateChatbotContext();
 });
-loadingLanguageSelect.addEventListener("change", () => applyLanguage(loadingLanguageSelect.value));
+loadingLanguageSelect.addEventListener("change", () => {
+  applyLanguage(loadingLanguageSelect.value);
+  updateChatbotContext();
+});
 applyLanguage(languageSelect.value);
 
 document.querySelectorAll("[data-login-tab]").forEach((tab) => {
@@ -74,31 +80,38 @@ document.querySelectorAll("[data-login-role]").forEach((roleButton) => {
   roleButton.addEventListener("click", () => {
     loginRole = roleButton.dataset.loginRole;
     document.querySelectorAll("[data-login-role]").forEach((item) => item.classList.toggle("active", item === roleButton));
+    const staffRole = ["doctor", "hospital_staff"].includes(loginRole);
     const doctor = loginRole === "doctor";
-    loginEyebrow.textContent = doctor ? "SECURE DOCTOR LOGIN" : translations[activeLanguage].secureLogin;
-    loginTitle.textContent = doctor ? "Care teams, connected." : translations[activeLanguage].loginTitle;
+    loginEyebrow.textContent = staffRole ? "SECURE STAFF LOGIN" : translations[activeLanguage].secureLogin;
+    loginTitle.textContent = staffRole ? "Care teams, connected." : translations[activeLanguage].loginTitle;
     loginDescription.textContent = doctor
       ? "Review AI case summaries, manage appointments, and coordinate patient care."
+      : loginRole === "hospital_staff"
+        ? "Track patient records, referrals, queues, and follow-up work for your hospital."
       : translations[activeLanguage].loginDescription;
-    loginLabel.textContent = doctor ? "Enter your doctor ID" : translations[activeLanguage].abhaLabel;
-    loginInput.placeholder = doctor ? "DR-ANANYA-204" : "12-3456-7890-1234";
-    loginInput.maxLength = doctor ? 32 : 17;
-    loginInput.inputMode = doctor ? "text" : "numeric";
-    loginPrefix.textContent = doctor ? "ID" : "ABHA";
-    qrLoginLabel.textContent = doctor ? "Login with staff SSO" : translations[activeLanguage].loginQr;
-    document.querySelectorAll("[data-login-tab]").forEach((item) => item.classList.toggle("is-disabled", doctor));
+    loginLabel.textContent = staffRole ? "Enter your staff ID" : translations[activeLanguage].abhaLabel;
+    loginInput.placeholder = staffRole ? "STAFF-MS-204" : "12-3456-7890-1234";
+    loginInput.maxLength = staffRole ? 32 : 17;
+    loginInput.inputMode = staffRole ? "text" : "numeric";
+    loginPrefix.textContent = staffRole ? "ID" : "ABHA";
+    qrLoginLabel.textContent = staffRole ? "Login with staff SSO" : translations[activeLanguage].loginQr;
+    document.querySelectorAll("[data-login-tab]").forEach((item) => item.classList.toggle("is-disabled", staffRole));
     loginInput.value = "";
   });
 });
 
 document.querySelector("#login-button").addEventListener("click", () => {
-  if (loginRole === "doctor") {
+  if (["doctor", "hospital_staff"].includes(loginRole)) {
     if (loginInput.value.trim().length < 4) {
       loginInput.focus();
-      showToast("Enter a valid doctor ID");
+      showToast("Enter a valid staff ID");
       return;
     }
-    window.location.href = "mana-sehat-clinical-command-center-2026.html";
+    if (loginRole === "doctor") {
+      window.location.href = "mana-sehat-clinical-command-center-2026.html";
+    } else {
+      window.location.href = `rural-workflow.html?role=${encodeURIComponent(loginRole)}`;
+    }
     return;
   }
   if (loginInput.value.replace(/\D/g, "").length < 6) {
@@ -117,6 +130,10 @@ document.querySelector("#login-button").addEventListener("click", () => {
 document.querySelector("#qr-login").addEventListener("click", () => {
   if (loginRole === "doctor") {
     window.location.href = "mana-sehat-clinical-command-center-2026.html";
+    return;
+  }
+  if (loginRole === "hospital_staff") {
+    window.location.href = `rural-workflow.html?role=${encodeURIComponent(loginRole)}`;
     return;
   }
   showToast("ABHA QR scanner is ready");
@@ -237,17 +254,15 @@ async function sendChat(text) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: cleanText, language: activeLanguage }),
-    });
+    }, 2000);
     if (!response.ok) throw new Error(`Chat request failed (${response.status})`);
     const payload = await response.json();
     const reply = payload.reply || assistantReply(cleanText);
     addChatMessage(reply, "bot");
   } catch (error) {
-    console.error("Gemini chat failed:", error);
-    const fallback = error.name === "AbortError"
-      ? "The assistant took too long to respond. Please try again or continue with the local help options."
-      : assistantReply(cleanText);
-    setTimeout(() => addChatMessage(fallback, "bot"), 450);
+    if (error.name !== "AbortError") console.warn("Gemini chat unavailable; using local assistant:", error.message);
+    const fallback = assistantReply(cleanText);
+    addChatMessage(fallback, "bot");
   }
 }
 document.querySelector("#chatbot-form").addEventListener("submit", (event) => {
@@ -264,6 +279,7 @@ function showView(viewName) {
   const active = document.querySelector(`[data-view="${viewName}"]`);
   breadcrumb.textContent = active ? active.textContent.trim().replace(/\s+\d+$/, "") : viewName;
   if (viewName === "timeline") renderSavedHistory();
+  if (viewName === "find-care") loadCareDirectory();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function renderSavedHistory() {
@@ -466,7 +482,7 @@ async function analyzeWithGemini(file, documentType) {
     formData.append("document", file);
     formData.append("documentType", documentType);
     formData.append("language", activeLanguage);
-    const response = await fetchWithTimeout(`${apiBaseUrl}/api/analyze-document`, { method: "POST", body: formData });
+    const response = await fetchWithTimeout(`${apiBaseUrl}/api/analyze-document`, { method: "POST", body: formData }, 3000);
     if (!response.ok) throw new Error(`Analysis request failed (${response.status})`);
     latestAnalysis = await response.json();
     if (documentType === "prescription") {
@@ -476,7 +492,7 @@ async function analyzeWithGemini(file, documentType) {
       showToast("X-ray context ready. Please answer the questions before saving.");
     }
   } catch (error) {
-    console.error("Gemini document analysis failed:", error);
+    if (error.name !== "AbortError") console.warn("Gemini document analysis unavailable; using safe preview:", error.message);
     latestAnalysis = null;
     if (documentType === "prescription") showPrescriptionResult(file);
     showToast(error.name === "AbortError"
@@ -564,6 +580,84 @@ document.querySelector("#speak-result").addEventListener("click", () => {
 document.querySelector("#speak-summary").addEventListener("click", (event) => {
   speakText(event.currentTarget.dataset.speechText || "No summary is available yet.");
 });
+
+const careDirectory = document.querySelector("#care-directory");
+const careFilters = document.querySelectorAll("[data-care-filter]");
+const careMapElement = document.querySelector("#care-map");
+const careMapStatus = document.querySelector("#care-map-status");
+let careFacilities = [];
+let careMap;
+let careMapMarkers;
+let careRefreshTimer;
+function renderCareMap(facilities) {
+  if (!careMapElement || !careMapStatus) return;
+  const mapped = facilities.filter((facility) => Number.isFinite(facility.latitude) && Number.isFinite(facility.longitude));
+  if (!window.L) {
+    careMapElement.innerHTML = '<div class="care-map-fallback"><div><strong>Map view needs an internet connection</strong><span>Registered hospital markers will appear here when the map service loads. The facility list remains available below.</span></div></div>';
+    careMapStatus.textContent = "List view is available.";
+    return;
+  }
+  careMap ||= L.map(careMapElement).setView([17.01, 79.42], 9);
+  if (!careMapMarkers) {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap contributors" }).addTo(careMap);
+    careMapMarkers = L.layerGroup().addTo(careMap);
+  }
+  careMapMarkers.clearLayers();
+  if (!mapped.length) {
+    careMapStatus.textContent = "No registered hospital locations are available yet.";
+    setTimeout(() => careMap.invalidateSize(), 0);
+    return;
+  }
+  const bounds = [];
+  mapped.forEach((facility) => {
+    const marker = L.marker([facility.latitude, facility.longitude]).bindPopup(`<strong>${escapeHtml(facility.name)}</strong><br>${escapeHtml(facility.openHours || "Hours not provided")}<br>Registered demo facility`);
+    marker.addTo(careMapMarkers);
+    bounds.push([facility.latitude, facility.longitude]);
+  });
+  careMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 12 });
+  setTimeout(() => careMap.invalidateSize(), 0);
+  careMapStatus.textContent = `${mapped.length} registered hospital location${mapped.length === 1 ? "" : "s"} shown. Availability refreshes automatically.`;
+}
+async function loadCareDirectory(filter = "all") {
+  if (!careDirectory) return;
+  renderCareMap(careFacilities);
+  careDirectory.innerHTML = "<div class=\"empty-records\"><strong>Loading nearby care…</strong><span>Checking the synthetic demo directory.</span></div>";
+  try {
+    const apiBase = window.MANA_SEHAT_API_URL || (location.protocol === "file:" ? "http://localhost:3001" : location.origin);
+    const apiUrl = `${apiBase}/api/demo/facilities`;
+    const response = await fetch(apiUrl, { headers: { "x-demo-role": "patient" } });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || "Nearby care is unavailable.");
+    careFacilities = body.facilities || [];
+    renderCareMap(careFacilities);
+    const facilities = filter === "all"
+      ? careFacilities
+      : careFacilities.filter((facility) => filter === "doctor"
+        ? facility.specialists?.length
+        : filter === "lab"
+          ? facility.diagnostics?.length
+          : filter === "medicine"
+            ? facility.medicines?.length
+          : facility.type === filter);
+    careDirectory.innerHTML = facilities.length
+      ? facilities.map((facility) => `<article class="record-item"><div class="record-icon">⌖</div><div class="record-info"><strong>${escapeHtml(facility.name)}</strong><span>${escapeHtml(facility.district)}, ${escapeHtml(facility.state)} · ${escapeHtml(facility.openHours)}</span><small>Doctors: ${escapeHtml((facility.specialists || []).join(" · "))}</small><small>Medical/labs: ${escapeHtml((facility.diagnostics || []).join(" · "))}</small><small>Medicines: ${escapeHtml((facility.medicines || []).map((item) => `${item.name} (${item.status})`).join(" · "))} · Registered demo availability</small></div><button class="outline-button small" type="button" data-care-request="${escapeHtml(facility.id)}">Request visit</button></article>`).join("")
+      : "<div class=\"empty-records\"><strong>No matching demo services</strong><span>Try another category.</span></div>";
+    careDirectory.querySelectorAll("[data-care-request]").forEach((button) => button.addEventListener("click", () => {
+      const facility = careFacilities.find((item) => item.id === button.dataset.careRequest);
+      showToast(`Visit request started for ${facility?.name || "this facility"}`);
+    }));
+  } catch (error) {
+    if (careMapStatus) careMapStatus.textContent = "Map is ready, but registered facilities could not be loaded. Start the MANA-SEHAT API to show live markers.";
+    careDirectory.innerHTML = `<div class="empty-records"><strong>Nearby care is unavailable</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+careFilters.forEach((button) => button.addEventListener("click", () => {
+  careFilters.forEach((item) => item.classList.toggle("active", item === button));
+  loadCareDirectory(button.dataset.careFilter);
+}));
+if (careDirectory) careRefreshTimer = setInterval(() => {
+  if (document.querySelector("#find-care.view.active")) loadCareDirectory(document.querySelector("[data-care-filter].active")?.dataset.careFilter || "all");
+}, 30000);
 
 function showToast(message) {
   toast.textContent = message;
